@@ -1,0 +1,34 @@
+# Git
+.git/
+.gitignore
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# Test results
+**/TestResults/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Documentation
+*.md
+LICENSE
+
+# OS
+.DS_Store
+Thumbs.db
