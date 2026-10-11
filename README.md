@@ -1,97 +1,139 @@
-# Daily Tracker
+# Daily Tracker -- Backend
 
-A personal daily habit-tracking application built with **Angular 19** (frontend) and **.NET 10** (backend).
+ASP.NET Core Web API for tracking daily habits, built with .NET 10 and EF Core.
 
-## Repository Layout
+## Architecture
 
-| Directory | Description |
-|-----------|-------------|
-| `frontend/` | Angular standalone app — dashboard, history, habit configuration |
-| `backend/` | ASP.NET Core Web API — layered architecture (Domain, Application, Infrastructure, Api) |
+The backend uses a layered architecture:
 
-## Backend (.NET 10)
+```
+src/
+  DailyTracker.Domain/         # Entities (Habit, DailyHabitEntry)
+  DailyTracker.Application/    # DTOs, service interfaces
+  DailyTracker.Infrastructure/ # EF Core, SQLite, repositories, seed data
+  DailyTracker.Api/            # Controllers, middleware, configuration
+tests/
+  DailyTracker.Tests/          # xUnit unit tests
+```
 
-### Local Development
+## Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+
+## Getting Started
 
 ```bash
-cd backend
 dotnet restore
-dotnet ef database update --project src/DailyTracker.Infrastructure --startup-project src/DailyTracker.Api
 dotnet run --project src/DailyTracker.Api
 ```
 
-The API will be available at `http://localhost:5000`.
+The API runs at `http://localhost:5000`.
 
-### Running Tests
+## Build and Test
 
 ```bash
-cd backend
+# Build
+dotnet build
+
+# Run tests
 dotnet test
+
+# Run in development mode
+dotnet run --project src/DailyTracker.Api --environment Development
 ```
 
-### API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/habits` | Get all active habits |
+| `GET` | `/api/habits` | List all active habits |
 | `PATCH` | `/api/habits/{id}` | Update a habit's daily target |
-| `GET` | `/api/daily-entries?date=YYYY-MM-DD` | Get entries for a date |
-| `PUT` | `/api/daily-entries/{habitId}/{date}` | Create or update an entry |
-| `GET` | `/api/daily-entries/history?from=YYYY-MM-DD&to=YYYY-MM-DD` | Get history range |
-| `GET` | `/health` | Health check |
+| `GET` | `/api/daily-entries?date=YYYY-MM-DD` | Get entries for a date (zero-filled) |
+| `PUT` | `/api/daily-entries/{habitId}/{date}` | Create or update a daily entry |
+| `GET` | `/api/daily-entries/history?from=YYYY-MM-DD&to=YYYY-MM-DD` | Get history for a date range |
+| `GET` | `/health` | Health check with database status |
 
-### Docker Deployment (Render)
+## Database
 
-The backend includes a multi-stage `Dockerfile` ready for Render.
+Uses **SQLite** by default. The connection string is read from configuration:
 
-**Required environment variables:**
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=/data/dailytracker.db"
+  }
+}
+```
 
-| Variable | Description |
-|----------|-------------|
-| `PORT` | Port to bind (Render sets this automatically) |
-| `ConnectionStrings__DefaultConnection` | SQLite connection string (defaults to `/data/dailytracker.db`) |
-
-**Optional environment variables:**
-
-| Variable | Description |
-|----------|-------------|
-| `Cors__Origins__0` | Allowed CORS origin (defaults to `http://localhost:4200`) |
-
-**Build and run locally with Docker:**
+### Migrations
 
 ```bash
-cd backend
+# Add a migration
+dotnet ef migrations add <Name> --project src/DailyTracker.Infrastructure --startup-project src/DailyTracker.Api
+
+# Apply migrations
+dotnet ef database update --project src/DailyTracker.Infrastructure --startup-project src/DailyTracker.Api
+```
+
+### Seed Data
+
+On startup, the application seeds six default habits if the database is empty:
+- Sleep (8h), Food (3 meals), Water (8 glasses), Walk (10,000 steps), Sun (10 min), Stand up (4 breaks)
+
+## Environment Variables
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `PORT` | HTTP port to bind | `10000` |
+| `ConnectionStrings__DefaultConnection` | SQLite file path | `/data/dailytracker.db` |
+| `Cors__Origins__0` | Allowed CORS origin | `http://localhost:4200` |
+| `Cors__Origins__1` | Allowed CORS origin | `https://box-frontend-1l88.vercel.app` |
+
+## Docker
+
+### Build
+
+```bash
 docker build -t daily-tracker-api .
-docker run -p 10000:10000 -e PORT=10000 daily-tracker-api
 ```
 
-### Database
-
-Uses **SQLite** by default for local development. The connection string can be switched to SQL Server by changing the provider in `Program.cs` and updating the connection string.
-
-Seed data populates six default habits on first run (Sleep, Food, Water, Walk, Sun, Stand up).
-
-## Frontend (Angular 19)
-
-### Local Development
+### Run
 
 ```bash
-cd frontend
-npm install
-ng serve
+docker run -p 10000:10000 \
+  -e PORT=10000 \
+  -e ConnectionStrings__DefaultConnection="Data Source=/data/dailytracker.db" \
+  -v daily-tracker-data:/data \
+  daily-tracker-api
 ```
 
-The app will be available at `http://localhost:4200`.
+The Dockerfile uses a multi-stage build:
+1. **Build stage** -- .NET 10 SDK, restores and publishes in Release mode
+2. **Runtime stage** -- .NET 10 ASP.NET runtime, copies published output
 
-### Build for Production
+## Render Deployment
 
-```bash
-cd frontend
-npm run build
+1. Create a **Web Service** in Render.
+2. Set **Build Command** to `docker build -t daily-tracker-api .`
+3. Set **Start Command** to `docker run -p $PORT:$PORT daily-tracker-api`
+4. Add environment variables from the table above.
+5. Render automatically injects the `PORT` variable.
+
+## Health Checks
+
+The `/health` endpoint returns a JSON response:
+
+```json
+{
+  "status": "Healthy",
+  "checks": [
+    { "name": "database", "status": "Healthy", "description": null }
+  ]
+}
 ```
 
-## Technology Stack
+## Development Workflow
 
-- **Frontend:** Angular 19, TypeScript, standalone components, Angular Router, HttpClient, Reactive Forms
-- **Backend:** .NET 10, ASP.NET Core Web API, EF Core 10, SQLite
-- **Testing:** xUnit
+- `main` -- production-ready code
+- `develop` -- integration branch
+- `feature/<name>` -- individual features
