@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DailyTracker.Api/DailyTracker.Api.csproj" />
+    <Project Path="src/DailyTracker.Application/DailyTracker.Application.csproj" />
+    <Project Path="src/DailyTracker.Domain/DailyTracker.Domain.csproj" />
+    <Project Path="src/DailyTracker.Infrastructure/DailyTracker.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DailyTracker.Tests/DailyTracker.Tests.csproj" />
+  </Folder>
+</Solution>
